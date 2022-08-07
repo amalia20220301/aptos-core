@@ -7,8 +7,8 @@ export const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 //:!:>section_1
 
 /** AptosAccount provides methods around addresses, key-pairs */
-import { AptosAccount, TxnBuilderTypes, BCS, MaybeHexString } from "aptos";
-
+import {AptosAccount, TxnBuilderTypes, MaybeHexString, TransactionBuilder} from "aptos";
+const {BCS} = TransactionBuilder;
 //<:!:section_1
 
 //:!:>section_2
@@ -43,7 +43,12 @@ const client = new AptosClient(NODE_URL);
 //:!:>section_5
 /** Helper method returns the coin balance associated with the account */
 export async function accountBalance(accountAddress: MaybeHexString): Promise<number | null> {
-  const resource = await client.getAccountResource(accountAddress, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>");
+  const resource = await client.getAccountResource(accountAddress,{
+    address: '0x1',
+    module: 'coin',
+    name: 'CoinStore',
+    generic_type_params: ['0x1::aptos_coin::AptosCoin']
+  });
   if (resource == null) {
     return null;
   }

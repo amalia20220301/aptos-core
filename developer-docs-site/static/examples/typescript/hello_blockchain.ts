@@ -4,7 +4,8 @@
 import assert from "assert";
 import fs from "fs";
 import { NODE_URL, FAUCET_URL, accountBalance } from "./first_transaction";
-import { AptosAccount, TxnBuilderTypes, BCS, MaybeHexString, HexString, AptosClient, FaucetClient } from "aptos";
+import { AptosAccount, TxnBuilderTypes, TransactionBuilder, MaybeHexString, HexString, AptosClient, FaucetClient } from "aptos";
+const {BCS} = TransactionBuilder;
 
 const readline = require("readline").createInterface({
   input: process.stdin,
@@ -48,7 +49,12 @@ async function getMessage(contractAddress: HexString, accountAddress: MaybeHexSt
   try {
     const resource = await client.getAccountResource(
       accountAddress,
-      `${contractAddress.toString()}::message::MessageHolder`,
+        {
+          address: contractAddress.toString(),
+          module: 'message',
+          name: 'MessageHolder',
+          generic_type_params: []
+        }
     );
     return (resource as any).data["message"];
   } catch (_) {

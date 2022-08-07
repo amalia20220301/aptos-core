@@ -4,8 +4,10 @@
 import assert from "assert";
 import fs from "fs";
 import { NODE_URL, FAUCET_URL } from "./first_transaction";
-import { AptosAccount, AptosClient, TxnBuilderTypes, BCS, MaybeHexString, HexString, FaucetClient } from "aptos";
+import { AptosAccount, AptosClient, TxnBuilderTypes, TransactionBuilder , MaybeHexString, HexString, FaucetClient } from "aptos";
 import { publishModule } from "./hello_blockchain";
+import {Buffer} from "buffer";
+const {BCS}=TransactionBuilder;
 
 const readline = require("readline").createInterface({
   input: process.stdin,
@@ -135,7 +137,12 @@ async function getBalance(accountAddress: MaybeHexString, coinTypeAddress: HexSt
   try {
     const resource = await client.getAccountResource(
       accountAddress,
-      `0x1::coin::CoinStore<${coinTypeAddress.hex()}::moon_coin::MoonCoin>`,
+        {
+          address: '0x1',
+          module: 'coin',
+          name: 'CoinStore',
+          generic_type_params:[`${coinTypeAddress.hex()}::moon_coin::MoonCoin`]
+        }
     );
 
     return parseInt((resource.data as any)["coin"]["value"]);
@@ -153,34 +160,46 @@ async function main() {
   const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
 
   // Create two accounts, Alice and Bob, and fund Alice but not Bob
-  const alice = new AptosAccount();
-  const bob = new AptosAccount();
+  const alice = new AptosAccount(new Uint8Array([
+    244, 120, 158, 140, 100,  79, 240,  51, 229, 191,  13,
+    217, 180, 117,  70, 232,  44,  60, 163,  78, 167, 167,
+    153, 231,  38,  18, 133, 191,   8,  73, 246, 144,  24,
+    212, 218,  13, 146, 222, 198, 165,  93, 167, 106, 227,
+    206, 235, 141, 193, 156,  53, 169, 179, 224,  53, 167,
+    145,  11,  94,  41, 233, 185,  80, 126, 162
+  ]),"0xd71a3290dc8cdac1e1698f96899285bc107f3535883844345203839d86c7cbe6");
+
+  const bob = new AptosAccount(new Uint8Array([
+    18,  33, 246, 139, 200,  25, 211, 190, 219, 124, 206,
+    172,  75, 135, 143,  83, 139,  56, 107,  73,  21,   0,
+    209,  68,  10, 235, 112,  81, 116, 228,  88, 111,  95,
+    211, 141, 104, 116, 225,  84,  34, 130,  83,   6, 156,
+    55,  16, 172, 157,  34, 179, 116, 129,  25, 169, 116,
+    107, 171, 194,  61, 249,  17, 222,  60,  12
+  ]),"0x02c6ce72e37bbc4d49dc3e165509f896259035d7fe81acdb5e02c25bf7d8c782");
 
   console.log("\n=== Addresses ===");
   console.log(`Alice: ${alice.address()}`);
   console.log(`Bob: ${bob.address()}`);
 
-  await faucetClient.fundAccount(alice.address(), 5_000);
-  await faucetClient.fundAccount(bob.address(), 5_000);
-
-  await new Promise<void>((resolve) => {
-    readline.question(
-      "Update the CoinType module with Alice's address, build, copy to the provided path, and press enter.",
-      () => {
-        resolve();
-        readline.close();
-      },
-    );
-  });
-  const modulePath = process.argv[2];
-  const moduleHex = fs.readFileSync(modulePath).toString("hex");
-
-  console.log("Publishing MoonCoinType module...");
-  let txHash = await publishModule(alice, moduleHex);
-  await client.waitForTransaction(txHash);
+  // await new Promise<void>((resolve) => {
+  //   readline.question(
+  //     "Update the CoinType module with Alice's address, build, copy to the provided path, and press enter.",
+  //     () => {
+  //       resolve();
+  //       readline.close();
+  //     },
+  //   );
+  // });
+  // const modulePath = process.argv[2];
+  // const moduleHex = fs.readFileSync(modulePath).toString("hex");
+  //
+  // console.log("Publishing MoonCoinType module...");
+  // let txHash = await publishModule(alice, moduleHex);
+  // await client.waitForTransaction(txHash);
 
   console.log("Alice will initialize the new coin");
-  txHash = await initializeCoin(alice, alice.address());
+  let txHash = await initializeCoin(alice, alice.address());
   await client.waitForTransaction(txHash);
 
   console.log("Bob registers the newly created coin so he can receive it from Alice");

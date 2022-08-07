@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { FAUCET_URL, NODE_URL, accountBalance } from "./first_transaction";
-import { AptosAccount, TxnBuilderTypes, BCS, AptosClient, HexString, FaucetClient } from "aptos";
+import { AptosAccount, TxnBuilderTypes, TransactionBuilder, AptosClient, HexString, FaucetClient } from "aptos";
+const {BCS} = TransactionBuilder;
 
 //:!:>section_1
 function serializeVectorBool(vecBool: boolean[]) {
@@ -256,7 +257,12 @@ async function getTokenBalance(
   collection_name: string,
   token_name: string,
 ): Promise<number> {
-  const token_store = await client.getAccountResource(owner, "0x3::token::TokenStore");
+  const token_store = await client.getAccountResource(owner, {
+      address: "0x3",
+      module: 'token',
+      name: 'TokenStore',
+      generic_type_params: []
+  });
 
   const token_data_id = {
     creator: creator.hex(),
@@ -275,12 +281,17 @@ async function getTokenBalance(
     "0x3::token::Token",
     token_id,
   );
-
-  return token.data.amount;
+    console.log('-----token-----------',token)
+  return token.amount;
 }
 
 async function getTokenData(creator: HexString, collection_name: string, token_name: string): Promise<any> {
-  const collections = await client.getAccountResource(creator, "0x3::token::Collections");
+  const collections = await client.getAccountResource(creator, {
+      address: "0x3",
+      module: 'token',
+      name: 'Collections',
+      generic_type_params: []
+  });
 
   const token_data_id = {
     creator: creator.hex(),
@@ -299,11 +310,27 @@ async function getTokenData(creator: HexString, collection_name: string, token_n
 //<:!:section_3
 
 async function main() {
-  const faucet_client = new FaucetClient(NODE_URL, FAUCET_URL);
+  // const faucet_client = new FaucetClient(NODE_URL, FAUCET_URL);
 
-  const alice = new AptosAccount();
-  const bob = new AptosAccount();
-  const collection_name = "Alice's cat collection";
+    const alice = new AptosAccount(new Uint8Array([
+        244, 120, 158, 140, 100,  79, 240,  51, 229, 191,  13,
+        217, 180, 117,  70, 232,  44,  60, 163,  78, 167, 167,
+        153, 231,  38,  18, 133, 191,   8,  73, 246, 144,  24,
+        212, 218,  13, 146, 222, 198, 165,  93, 167, 106, 227,
+        206, 235, 141, 193, 156,  53, 169, 179, 224,  53, 167,
+        145,  11,  94,  41, 233, 185,  80, 126, 162
+    ]),"0xd71a3290dc8cdac1e1698f96899285bc107f3535883844345203839d86c7cbe6");
+
+    const bob = new AptosAccount(new Uint8Array([
+        18,  33, 246, 139, 200,  25, 211, 190, 219, 124, 206,
+        172,  75, 135, 143,  83, 139,  56, 107,  73,  21,   0,
+        209,  68,  10, 235, 112,  81, 116, 228,  88, 111,  95,
+        211, 141, 104, 116, 225,  84,  34, 130,  83,   6, 156,
+        55,  16, 172, 157,  34, 179, 116, 129,  25, 169, 116,
+        107, 171, 194,  61, 249,  17, 222,  60,  12
+    ]),"0x02c6ce72e37bbc4d49dc3e165509f896259035d7fe81acdb5e02c25bf7d8c782");
+
+    const collection_name = "Alice's cat collection";
   const token_name = "Alice's tabby";
 
   console.log("\n=== Addresses ===");
@@ -312,8 +339,8 @@ async function main() {
   );
   console.log(`Bob: ${bob.address()}. Key Seed: ${Buffer.from(bob.signingKey.secretKey).toString("hex").slice(0, 64)}`);
 
-  await faucet_client.fundAccount(alice.address(), 5_000);
-  await faucet_client.fundAccount(bob.address(), 5_000);
+  // await faucet_client.fundAccount(alice.address(), 5_000);
+  // await faucet_client.fundAccount(bob.address(), 5_000);
 
   console.log("\n=== Initial Balances ===");
   console.log(`Alice: ${await accountBalance(alice.address())}`);
@@ -321,29 +348,32 @@ async function main() {
 
   console.log("\n=== Creating Collection and Token ===");
 
-  await createCollection(alice, collection_name, "Alice's simple collection", "https://aptos.dev");
-  await createToken(
-    alice,
-    collection_name,
-    token_name,
-    "Alice's tabby",
-    1,
-    "https://aptos.dev/img/nyan.jpeg", //TODO: replace with uri link matching ERC1155 off-chain standard
-  );
+  // await createCollection(alice, collection_name, "Alice's simple collection", "https://aptos.dev");
+  // await createToken(
+  //   alice,
+  //   collection_name,
+  //   token_name,
+  //   "Alice's tabby",
+  //   1,
+  //   "https://aptos.dev/img/nyan.jpeg", //TODO: replace with uri link matching ERC1155 off-chain standard
+  // );
+    try{
+        let token_balance = await getTokenBalance(alice.address(), alice.address(), collection_name, token_name);
+        console.log(`Alice's token balance: ${token_balance}`);
+        const token_data = await getTokenData(alice.address(), collection_name, token_name);
+        console.log(`Alice's token data: ${JSON.stringify(token_data)}`);
 
-  let token_balance = await getTokenBalance(alice.address(), alice.address(), collection_name, token_name);
-  console.log(`Alice's token balance: ${token_balance}`);
-  const token_data = await getTokenData(alice.address(), collection_name, token_name);
-  console.log(`Alice's token data: ${JSON.stringify(token_data)}`);
+        console.log("\n=== Transferring the token to Bob ===");
+        await offerToken(alice, bob.address(), alice.address(), collection_name, token_name, 1);
+        await claimToken(bob, alice.address(), alice.address(), collection_name, token_name);
 
-  console.log("\n=== Transferring the token to Bob ===");
-  await offerToken(alice, bob.address(), alice.address(), collection_name, token_name, 1);
-  await claimToken(bob, alice.address(), alice.address(), collection_name, token_name);
-
-  token_balance = await getTokenBalance(alice.address(), alice.address(), collection_name, token_name);
-  console.log(`Alice's token balance: ${token_balance}`);
-  token_balance = await getTokenBalance(bob.address(), alice.address(), collection_name, token_name);
-  console.log(`Bob's token balance: ${token_balance}`);
+        token_balance = await getTokenBalance(alice.address(), alice.address(), collection_name, token_name);
+        console.log(`Alice's token balance: ${token_balance}`);
+        token_balance = await getTokenBalance(bob.address(), alice.address(), collection_name, token_name);
+        console.log(`Bob's token balance: ${token_balance}`);
+    }catch(e){
+        console.log('-------e---------',e)
+    }
 }
 
 if (require.main === module) {

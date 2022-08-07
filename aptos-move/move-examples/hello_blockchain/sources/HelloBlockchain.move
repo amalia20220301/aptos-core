@@ -1,4 +1,4 @@
-module HelloBlockchain::message {
+module 0x02c6ce72e37bbc4d49dc3e165509f896259035d7fe81acdb5e02c25bf7d8c782::message {
     use std::string;
     use std::error;
     use aptos_std::event;
