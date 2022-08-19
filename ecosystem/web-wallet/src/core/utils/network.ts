@@ -9,8 +9,8 @@ import {
   LOCAL_FAUCET_URL,
 } from 'core/constants';
 
-export type AptosNetwork = 'http://0.0.0.0:8080' | 'https://fullnode.devnet.aptoslabs.com';
-export type FaucetNetwork = 'http://0.0.0.0:8000' | 'https://faucet.devnet.aptoslabs.com';
+export type AptosNetwork = 'http://0.0.0.0:8080' | 'https://fullnode.devnet.aptoslabs.com' | 'https://fullnode.devnet.aptoslabs.com/v1';
+export type FaucetNetwork = 'http://0.0.0.0:8000' | 'https://faucet.devnet.aptoslabs.com' | 'https://faucet.devnet.aptoslabs.com/v1';
 
 export const networkUriMap: Record<string | number, string> = {
   'http://0.0.0.0:8080': 'Localhost',
@@ -37,6 +37,7 @@ export function getFaucetNetworkFromAptosNetwork(aptosNetwork: AptosNetwork): Fa
   switch (aptosNetwork) {
     case DEVNET_NODE_URL: return faucetUriMap.DEVNET_NODE_URL;
     case LOCAL_NODE_URL: return faucetUriMap.LOCAL_NODE_URL;
+    case 'https://fullnode.devnet.aptoslabs.com/v1': return 'https://faucet.devnet.aptoslabs.com/v1';
     default: return assertNeverNetwork(aptosNetwork);
   }
 }

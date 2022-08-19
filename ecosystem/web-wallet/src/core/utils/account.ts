@@ -8,7 +8,13 @@ import {
   AptosAccountState, LocalStorageState, Result, err, ok,
 } from 'core/types';
 
-export function loginAccount(key: string): Result<AptosAccount, Error> {
+import { DefaultKeyring } from '@keystonehq/aptos-keyring';
+
+export async function loginAccount(key: string): Promise<Result<AptosAccount, Error>> {
+  const keyring = await DefaultKeyring.getEmptyKeyring();
+  await keyring.readKeyring();
+  const authKey = keyring.getAuthKeys()[0]!.pubKey;
+  console.log('authenKey', authKey);
   if (key.length === KEY_LENGTH) {
     try {
       const encodedKey = Uint8Array.from(Buffer.from(key, 'hex'));

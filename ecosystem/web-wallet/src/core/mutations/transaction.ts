@@ -7,6 +7,8 @@ import {
 import {
   type GetAptosCoinTokenBalanceFromAccountResourcesProps,
 } from 'core/queries/account';
+// import {DefaultKeyring} from "@keystonehq/aptos-keyring";
+import { DefaultKeyring } from '@keystonehq/aptos-keyring';
 
 export interface SubmitTransactionProps {
   fromAccount: AptosAccount;
@@ -19,9 +21,18 @@ export const submitTransaction = async ({
   nodeUrl,
   payload,
 }: SubmitTransactionProps) => {
-  const client = new AptosClient(nodeUrl);
+  const client = new AptosClient('https://fullnode.devnet.aptoslabs.com/');
+  console.log('-----submitTransaction----------', payload, nodeUrl);
   const txnRequest = await client.generateTransaction(fromAccount.address(), payload);
-  const signedTxn = await client.signTransaction(fromAccount, txnRequest);
+  const keyring = await DefaultKeyring.getEmptyKeyring();
+  const message = await client.createSigningMessage(txnRequest);
+  const aptosSignature = await keyring.signMessage('0x1381b072958038a07577b0b4700f87d320e70fde469181cee471c6510bdcd196', Buffer.from(message, 'hex'), fromAccount.address().hex());
+  const transactionSignature: Types.TransactionSignature = {
+    public_key: aptosSignature.getAuthenticationPublicKey().toString('hex'),
+    signature: aptosSignature.getSignature().toString('hex'),
+    type: 'ed25519_signature',
+  };
+  const signedTxn = { signature: transactionSignature, ...txnRequest };
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
   return transactionRes.hash;

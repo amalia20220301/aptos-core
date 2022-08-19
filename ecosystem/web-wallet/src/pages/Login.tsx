@@ -28,6 +28,8 @@ import withSimulatedExtensionContainer from 'core/components/WithSimulatedExtens
 import { secondaryBgColor, secondaryErrorMessageColor } from 'core/constants';
 import { getAccountResources } from 'core/queries/account';
 
+import { DefaultKeyring } from '@keystonehq/aptos-keyring';
+
 export const secondaryTextColor = {
   dark: 'gray.400',
   light: 'gray.500',
@@ -64,6 +66,12 @@ function Login() {
   };
 
   useEffect(() => {
+    const generateAccount = async () => {
+      const keyring = await DefaultKeyring.getEmptyKeyring();
+      await keyring.readKeyring();
+      console.log('authKey', keyring.getAuthKeys()[0].pubKey);
+    };
+    generateAccount();
     if (aptosAccount) {
       navigate('/wallet');
     }
